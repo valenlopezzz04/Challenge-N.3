@@ -59,6 +59,43 @@ Gracias a su arquitectura modular, al uso de comunicación inalámbrica y a su c
 
 ### Restricciones de Diseño Identificadas
 
+<p align="justify"> 
+Al desarrollar el sistema IoT para detectar incendios en los cerros orientales de Bogotá, se identificaron varias restricciones que afectan su diseño, implementación y comunicación de datos:
+</p> 
+
+#### 1. Técnicas
+- Se usa un **ESP32**, el cual tiene un límite en la memoria RAM y el procesamiento, lo que puede afectar la ejecución simultánea del servidor web local, la recolección de datos de sensores, la transmisión de datos mediante MQTT hacia el broker en la Raspberry Pi.
+- Los sensores de **temperatura, gas (MQ-2) y llama** requieren una calibración precisa para minimizar falsas alarmas, además de que tienen determinados tiempos de respuesta que pueden influir en la detección temprana de incendios.
+- Dependencia de una conexión estable de WiFi para enviar y visualizar los datos en la interfaz web local, mantener la conexión activa con el broker MQTT y permitir la actualización de estados en tiempo real hacia Ubidots.
+- Para la gestión de múltiples tareas, se implementó un enfoque optimizado que permite la adquisición de datos sin afectar la estabilidad del sistema y la transmisión de datos por MQTT.
+- El sistema debe gestionar reconexiones automáticas al broker MQTT para garantizar continuidad en la transmisión de datos ante caídas de red.
+- La Raspberry Pi debe estar configurada de forma robusta para funcionar como un broker MQTT estable, lo que incluye la gestión de múltiples conexiones simultáneas si se escala el sistema.
+- Dependencia de servicios en la nube (Ubidots), lo que introduce una nueva capa de posibles fallas externas (caídas del servicio, latencia en internet).
+
+#### 2. Económicas
+- Se sigue buscando minimizar costos, utilizando hardware como el ESP32, sensores económicos pero siendo lo suficientemente confiables y precisos para realizar apropiadamente las mediciones; y una Raspberry Pi como broker local en lugar de servicios en la nube de pago (por ejemplo, brokers MQTT comerciales).
+- Utilización del Free Trial de Ubidots para el monitoreo en la nube.
+- uso de tecnologías inalámbricas evita la necesidad de instalaciones físicas costosas (cableados extensivos, redes cableadas).
+  
+#### 3. Regulatorias
+- Se debe cumplir con normativas ambientales y estándares de seguridad eléctrica para su instalación de equipos electrónicos en zonas protegidas y transmisión de datos desde dispositivos de monitoreo ambiental.
+- Cualquier intervención en los cerros debe ajustarse a regulaciones locales.
+- Debe revisarse el cumplimiento de normas sobre protección de datos y transmisión segura con plataformas externas (Ubidots).
+
+#### 4. Espaciales
+- El sistema debe ser compacto y resistente a condiciones climáticas adversas (lluvia, humedad y polvo).
+- Los sensores deben estar ubicados estratégicamente para detectar cambios de temperatura y gases sin interferencias, maximizando su efectividad sin afectar el ecosistema.
+- Para el montaje del sistema, la integración de la pantalla LCD, los LEDs y los sensores debe ser compacta y accesible.
+
+#### 5. Escalabilidad
+- Aunque es un prototipo, debe permitir mejoras o expansión en el futuro como agregar más nodos ESP32 reportando al mismo broker Raspberry Pi y hacer que Ubidots permite visualizar múltiples dispositivos o variables en un mismo tablero de control. 
+- Si se desean conectar múltiples dispositivos a un mismo servidor, se debe optimizar la comunicación para no saturar la red.
+- Si se requiere monitoreo en varias áreas, se debe considerar el crecimiento del número de conexiones simultáneas al broker local y el impacto en el desempeño de la red WiFi.
+
+#### 6. Temporales
+- El sistema debe operar en **tiempo real** para detectar incendios lo más rápido posible, donde se establece un intervalo adecuado entre lecturas en los sensores para evitar saturación del sistema sin comprometer la detección temprana (3 segundos), en este caso para la publicación de datos MQTT y que el servidor local y la nube muestren las actualizaciones casi inmediatamente después de cada lectura.
+- El sistema ahora requiere mecanismos de reconexión automática para el broker MQTT y para el WiFi, minimizando la necesidad de intervención manual constante.
+  
 ### Arquitectura Propuesta
 
 ### Desarrollo Teórico Modular: Criterios de Diseño Establecidos
