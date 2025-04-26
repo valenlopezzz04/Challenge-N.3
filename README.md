@@ -98,6 +98,20 @@ Al desarrollar el sistema IoT para detectar incendios en los cerros orientales d
   
 ### Arquitectura Propuesta
 
+<p align="justify"> 
+A continuación, se presenta un Diagrama de Bloques que ilustra los elementos de hardware y software que conforman la solución IoT desarrollada.
+</p> 
+
+![Diagrama de la arquitectura de la solución](Diagramas/DiagramaBloques.png)
+*Figura 1: Arquitectura IoT propuesta de la solución.*
+
+<p align="justify"> 
+El sistema está basado en un ESP32, que actúa como la unidad de procesamiento principal y se encarga de la adquisición y preprocesamiento de datos provenientes de los sensores de temperatura (DS18B20), gas (MQ-2) y llama. El módulo de sensado opera de forma continua en segundo plano, y la información recopilada es analizada localmente para actualizar el historial de temperaturas, detectar condiciones de riesgo y gestionar alertas en tiempo real. En caso de que se determine una situación de peligro, el módulo de actuadores entra en acción, activando un LED RGB y un buzzer para alertar sobre el estado del ambiente. Asimismo, el módulo de visualización local actualiza la pantalla LCD I2C, donde se muestra en tiempo real la temperatura y el estado general del entorno.
+</p>
+
+
+
+
 ### Desarrollo Teórico Modular: Criterios de Diseño Establecidos
 
 ### Diagrama UML
