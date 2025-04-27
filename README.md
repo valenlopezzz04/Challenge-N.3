@@ -259,19 +259,33 @@ Para garantizar que el sistema desarrollado sea seguro, eficiente y cumpla con p
 ---
 
 ## 5. Autoevaluación del Protocolo de Pruebas
-<p align="justify">
-
+<p align="justify"> 
+El protocolo de pruebas del sistema se diseñó para validar el correcto funcionamiento de la solución IoT propuesta, evaluando la detección de eventos críticos, la activación de alarmas, la transmisión de datos y la visualización en tableros locales y remotos. Las pruebas se realizaron en dos etapas: simulación previa en Wokwi y verificación en laboratorio utilizando un prototipo físico diseñado para almacenar todos los componentes del dispositivo IoT. 
 </p>
 
+### Entornos de Prueba
+<p align="justify"> 
+Como continuidad del trabajo desarrollado en el Challenge 2, se utilizó nuevamente la plataforma Wokwi para simular la conexión entre el ESP32, los sensores de temperatura, gas y llama, el buzzer, el LED RGB y la pantalla LCD I2C. Esta simulación, que ya había sido validada previamente, permitió ajustar y confirmar la lógica de funcionamiento del sistema antes del ensamblaje físico, asegurando que la lectura de sensores, el procesamiento de datos y la activación de alertas se ejecutaran de manera adecuada. Asimismo, permitió verificar que toda esta información se presentara correctamente en el tablero de control local.
+</p>
 
-### Mejoras Identificadas en el Proceso de Pruebas
+<p align="justify"> 
+Posteriormente, se construyó el prototipo físico (ver Figura 4), en el cual se alojaron el ESP32, los sensores y los actuadores dentro de una estructura circular personalizada. En este prototipo se realizaron pruebas bajo condiciones controladas, utilizando un mechero para simular situaciones de incendio. Además, se validó la transmisión de datos hacia la Raspberry Pi, mediante la inserción de mensajes de confirmación en la consola, lo que permitió verificar el envío, la recepción y la posterior sincronización de los datos con la plataforma IoT Ubidots. </p>
 
+![Prototipo Físico](Img/Prototipo.jpg)
+*Figura 5: Prototipo físico del sistema desarrollado.*
 
+### Umbrales de Activación
+<p align="justify"> 
+A partir de las mediciones realizadas, y considerando que la encapsulación del prototipo afectaba la temperatura interna, como se justificó previamente en la sección de Configuración Experimental, Resultados y Análisis, se redefinieron los siguientes umbrales de activación: 
+</p>
 
+- Temperatura máxima: 27 °C (anteriormente 24 °C)
+- Incremento rápido de temperatura: ≥ 0.5 °C en menos de 10 segundos.
+- Nivel de gas: > 3200 unidades.
+- Llama: detección instantánea.
 
-### Comparación de Desempeño con Expectativas Iniciales
-<p align="justify">
-
+<p align="justify"> 
+Cada condición activaba su correspondiente alerta en el sistema, acompañada de notificaciones visuales y sonoras generadas por el LED RGB, el buzzer activo y la pantalla LCD I2C, además de la transmisión de eventos hacia el tablero local embebido en el ESP32 y el tablero remoto disponible en la plataforma IoT Ubidots. 
 </p>
 
 ---
