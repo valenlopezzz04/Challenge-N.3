@@ -201,7 +201,7 @@ Finalmente, Este ciclo de captura, procesamiento y comunicación se repite aprox
 En seguida, se muestra el diagrama que representa el Esquemático de Hardware de la solución planteada.
 
 ![Esquemático de hardware de la solución](Diagramas/EsquematicoHardware2.png)
-*Figura 3: Esquemático de hardware de la solución propuesta.*
+*Figura 4: Esquemático de hardware de la solución propuesta.*
 
 <p align="justify"> 
 Para la simulación en Wokwi con el ESP32, se utilizó un sensor de temperatura real. Sin embargo, debido a la falta de disponibilidad de sensores de gas y llama en la plataforma, se optó por simular su comportamiento utilizando un potenciómetro y un botón, respectivamente.
@@ -221,7 +221,32 @@ El código fue diseñado para gestionar tanto el sensor de temperatura como los 
 #### **Nota sobre la Raspberry Pi:**
 <p align="justify"> En cuanto a la Raspberry Pi utilizada en la solución, no fue necesario realizar un esquemático de hardware detallado, ya que este dispositivo únicamente se conecta a la fuente de alimentación y a una tarjeta microSD. No se utilizaron conexiones directas a sensores o actuadores mediante pines GPIO en esta etapa del proyecto, enfocándose su función en el procesamiento y comunicación de datos. </p>
 
+
 ### Estándares de Ingeniería Aplicados
+<p align="justify"> 
+Para garantizar que el sistema desarrollado sea seguro, eficiente y cumpla con principios de calidad, se han aplicado diversos estándares de ingeniería en diferentes áreas del proyecto:
+</p>
+
+#### 1. Sensores y Electrónica
+- **IEEE 1451:** Se siguieron principios de interoperabilidad para la integración de sensores en el sistema IoT, asegurando compatibilidad y escalabilidad.
+- **ISO 9001:** Se aplicaron criterios de calidad en la selección de componentes electrónicos, garantizando confiabilidad y precisión en las mediciones.
+
+#### 2. Programación y Software
+- **Arduino Coding Standards:** Se adoptaron buenas prácticas en la escritura del código para mejorar la legibilidad, mantenibilidad y eficiencia del software en el ESP32.
+- **Optimización de adquisición de datos:** Se diseñó un mecanismo para gestionar la lectura de sensores sin interrumpir otras funciones críticas del sistema, alineado con buenas prácticas en programación de sistemas embebidos.
+- **Manejo de tareas concurrentes:**
+  - **FreeRTOS:** Se optó por este enfoque, permitiendo la creación de un segundo y tercer hilo de ejecución real, mejorando la capacidad de respuesta del sistema y optimizando el uso del procesador. Se gestionaron prioridades y tiempos de ejecución siguiendo los principios de sistemas en tiempo real.
+- **Gestión de bases de datos locales:**
+  - **SQLite (ISO/IEC 9075 - SQL estándar):** Se implementó una base de datos ligera en la Raspberry Pi para almacenar los datos de los sensores de forma local, garantizando integridad y disponibilidad de la información aún en escenarios de pérdida de conectividad con la nube.
+- **Comunicación Machine-to-Machine (M2M):**
+  - **MQTT (OASIS Standard):** Se utilizó el protocolo MQTT para la transmisión eficiente de datos entre el ESP32, la Raspberry Pi y la plataforma Ubidots, siguiendo los estándares para sistemas de comunicación ligeros en IoT.
+
+#### 3. Sistemas de Computación y Comunicación
+- **IEEE 802.11:** Se utilizó la norma IEEE 802.11 para la conexión WiFi de la Raspberry Pi, asegurando la comunicación inalámbrica eficiente y segura dentro del sistema IoT.
+- **ISO/IEC 27001:** Aunque no se implementó un sistema de gestión de seguridad de la información completo, se adoptaron principios básicos de seguridad para proteger la comunicación entre dispositivos y la nube (ej. configuración segura de credenciales, uso de HTTPS para Ubidots).
+
+#### 4. Modelado y Documentación
+- **UML (ISO/IEC 19501)**: Se utilizaron diagramas UML para representar la estructura del software y el flujo de datos dentro del sistema, facilitando la documentación y análisis del proyecto.
 
 ---
 
