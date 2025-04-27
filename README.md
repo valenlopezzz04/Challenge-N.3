@@ -420,8 +420,8 @@ const char* htmlPage = R"rawliteral(
   )rawliteral";
 
 // ========================== CONFIGURACIÓN WiFi ==========================
-const char* ssid = "iPhone Ana (5)";   // Cambia esto por el nombre del hotspot del iPhone
-const char* password = "Toby3333";  // Cambia esto por tu contraseña
+const char* ssid = "---";   // Cambia esto por el nombre del hotspot del iPhone
+const char* password = "---";  // Cambia esto por tu contraseña
 
 WebServer server(80);
 
@@ -949,7 +949,7 @@ CREATE TABLE IF NOT EXISTS datos (
 db.commit()
 
 # Token Ubidots
-UBIDOTS_TOKEN = "BBUS-rNyGEgYnILjIm80p8uX89MqlfoNKRu"
+UBIDOTS_TOKEN = "---"
 UBIDOTS_DEVICE = "raspberry-sensor-node"
 UBIDOTS_TOPIC = f"/v1.6/devices/{UBIDOTS_DEVICE}"
 UBIDOTS_RESET_TOPIC = f"/v1.6/devices/{UBIDOTS_DEVICE}/reset_alarma"
