@@ -106,10 +106,17 @@ A continuación, se presenta un Diagrama de Bloques que ilustra los elementos de
 *Figura 1: Arquitectura IoT propuesta de la solución.*
 
 <p align="justify"> 
-El sistema está basado en un ESP32, que actúa como la unidad de procesamiento principal y se encarga de la adquisición y preprocesamiento de datos provenientes de los sensores de temperatura (DS18B20), gas (MQ-2) y llama. El módulo de sensado opera de forma continua en segundo plano, y la información recopilada es analizada localmente para actualizar el historial de temperaturas, detectar condiciones de riesgo y gestionar alertas en tiempo real. En caso de que se determine una situación de peligro, el módulo de actuadores entra en acción, activando un LED RGB y un buzzer para alertar sobre el estado del ambiente. Asimismo, el módulo de visualización local actualiza la pantalla LCD I2C, donde se muestra en tiempo real la temperatura y el estado general del entorno.
-</p>
+El sistema está basado en un ESP32, que actúa como la unidad de procesamiento principal y se encarga de la adquisición y preprocesamiento de datos provenientes de los sensores de temperatura (DS18B20), gas (MQ-2) y llama. El módulo de sensado opera de forma continua en segundo plano, y la información recopilada es analizada localmente para actualizar el historial de temperaturas, detectar condiciones de riesgo y gestionar alertas en tiempo real. En caso de que se determine una situación de peligro, el módulo de actuadores entra en acción, activando un LED RGB y un buzzer para alertar sobre el estado del ambiente. Asimismo, el módulo de visualización local actualiza la pantalla LCD I2C, donde se muestra en tiempo real la temperatura y el estado general del entorno. </p>
 
+<p align="justify">
+De igual forma, con respecto a la visualización local, el ESP32 implementa un servidor web embebido (EWS), permitiendo a los usuarios monitorear el sistema en tiempo real a través de una interfaz web accesible desde cualquier dispositivo conectado a la misma red WiFi, la cual puede establecerse utilizando un punto de acceso externo (AP o router). La comunicación entre el ESP32 y los navegadores web se realiza mediante el protocolo TCP/IP. </p>
 
+<p align="justify"> En cuanto a la comunicación externa, el ESP32 utiliza el protocolo MQTT para enviar periódicamente los datos adquiridos a una Raspberry Pi configurada como Gateway IoT. Esta Raspberry Pi alberga un broker Mosquitto y una base de datos SQLite que permite el almacenamiento local de la información, proporcionando una capa adicional de persistencia y respaldo de datos. </p>
+
+<p align="justify"> Adicionalmente, la Raspberry Pi se encarga de reenviar los datos relevantes a la plataforma en la nube Ubidots, también utilizando el protocolo MQTT. Desde Ubidots, se habilita la supervisión remota del sistema y el control de alarmas, permitiendo el envío de comandos de respuesta hacia el ESP32 en situaciones de emergencia o condiciones anómalas. </p>
+
+<p align="justify">
+Cabe resaltar que toda la lógica de adquisición, procesamiento, comunicación y control ha sido desarrollada en C++ para el ESP32 y Python para la Raspberry Pi, garantizando una operación eficiente, autónoma y resiliente del sistema IoT propuesto. Esta integración de hardware y software permite monitorear el entorno de forma local y remota, maximizando la confiabilidad y accesibilidad de la solución. </p>
 
 
 ### Desarrollo Teórico Modular: Criterios de Diseño Establecidos
