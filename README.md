@@ -154,7 +154,7 @@ Para que el sistema sea eficiente y funcional, se definieron los siguientes crit
 
 ### Diagramas UML
 <p align="justify"> 
-Las siguientes figuras ilustran los Diagramas de Actividad UML de la solución propuesta, donde se representan los flujos de ejecución del sistema de monitoreo y alerta. Para una mejor visualización, se proporcionan enlaces adicionales:
+Las siguientes figuras ilustran los Diagramas de Actividad UML de la solución propuesta, donde se representan los flujos de ejecución del sistema de monitoreo y alerta. Para una mejor visualización, se proporciona un enlace adicional:
 </p>
 
 ![Diagrama de actividades de la ESP32](Diagramas/DiagramaActividadesESP32.png)
@@ -166,22 +166,36 @@ Las siguientes figuras ilustran los Diagramas de Actividad UML de la solución p
 - ***Link para mejor visualización de los diagramas:*** [https://www.canva.com/design/DAGltZirFnE/EE1g_EzG_OeKU2u2RzFSxw/view?utm_content=DAGltZirFnE&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h096d0f7c1d](https://www.canva.com/design/DAGltZirFnE/EE1g_EzG_OeKU2u2RzFSxw/view?utm_content=DAGltZirFnE&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h096d0f7c1d)
 
 <p align="justify"> 
-Los diagramas representan el flujo de ejecución de cada uno de los dos componentes principales del sistema: el ESP32, que actúa como nodo de sensado y alerta, y la Raspberry Pi, que opera como centro de procesamiento y comunicación hacia la nube. </p>
+Los diagramas representan el flujo de ejecución de los dos componentes principales del sistema: el ESP32, encargado de la sensorización y del procesamiento, y la Raspberry Pi, responsable del almacenamiento y envío de información hacia la nube. </p>
 
 #### Flujo de Actividades en el ESP32
 
 <p align="justify"> 
-El ESP32 tiene la responsabilidad de la captura y procesamiento inicial de los datos de los sensores, así como de la activación de actuadores ante situaciones de riesgo. El flujo de ejecución en este dispositivo puede dividirse en cinco módulos principales: </p>
+El ESP32 tiene la responsabilidad de capturar y procesar inicialmente los datos del entorno, así como de activar mecanismos de alerta en caso de detectar condiciones anómalas. Su flujo de ejecución se organiza en los siguientes módulos principales: </p>
 
-- **Entorno y flujo principal:** Configura los pines de entrada y salida, inicializa la pantalla LCD, los sensores de temperatura, gas y llama, y establece las variables de estado. Además, se inicia el servidor web local para permitir la interacción con un cliente web.
-- **Módulo de sensado:** En un segundo hilo, se realiza la lectura periódica de los sensores (DS18B20, MQ-2, sensor de llama) para obtener mediciones del entorno en tiempo real.
-- **Módulo de procesamiento:** Analiza las lecturas de los sensores aplicando reglas de decisión basadas en umbrales establecidos. Si se detectan condiciones peligrosas, se genera un cambio de estado a "alerta". Además, se registran los valores de temperatura y se encarga de respetar la duración establecida para las alertas.
+- **Entorno y flujo principal:** Configura los pines de entrada y salida, inicializa la pantalla LCD, los sensores (temperatura, gas y llama) y las variables globales de estado. También se inicia un servidor web local para permitir la interacción desde un navegador web.
+- **Módulo de comunicación MQTT:** De forma general y en un segundo hilo, establece la conexión con el broker MQTT para publicar los datos de los sensores y recibir posibles comandos desde la nube.
+- **Módulo de sensado:** En un tercer hilo, realiza lecturas periódicas de los sensores (DS18B20, MQ-2, sensor de llama), obteniendo mediciones en tiempo real del entorno físico.
+- **Módulo de procesamiento:** Analiza los datos capturados utilizando reglas basadas en umbrales predefinidos, determinando si las condiciones son seguras o de alerta. Además, se registran los valores de temperatura y se encarga de respetar la duración establecida para las alertas.
 - **Módulo de actuadores:** Si se detecta una alerta específica o de incendio, se activa la alarma poniendo el LED RGB en color rojo (indicando nivel de riesgo) y activando el buzzer para generar una advertencia sonora. En caso contrario, se desactiva este último y el LED toma un color verde.
-- **Módulo de visualización:** Actualiza los datos en la pantalla LCD y en el cliente web. Permite al usuario visualizar las condiciones en tiempo real y gestionar la desactivación de la alarma si es necesario. Lo anterior se logra a partir de la recepción de solicitudes HTTP GET desde el navegador para actualizar datos y gestionar la alarma.
+- **Módulo de visualización:** Actualiza los datos en la pantalla LCD y en el cliente web local. Permite al usuario visualizar las condiciones en tiempo real y gestionar la desactivación de la alarma si es necesario. Lo anterior se logra a partir de la recepción de solicitudes HTTP GET desde el navegador para actualizar datos y gestionar la alarma.
 
 <p align="justify"> 
-Finalmente, el ciclo completo se repite cada 1000 ms, asegurando un monitoreo continuo y una respuesta rápida ante eventos críticos.
-</p>
+Finalmente, Este ciclo de captura, procesamiento y comunicación se repite aproximadamente cada 1000 ms, asegurando un monitoreo constante y en tiempo real. </p>
+
+#### Flujo de Actividades en la Raspberry Pi
+
+<p align="justify"> La Raspberry Pi cumple la función de centro de comunicación externa, recopilando los datos provenientes del ESP32, almacenándolos localmente en una base de datos y retransmitiéndolos hacia la nube. El flujo de ejecución está compuesto por los siguientes módulos: </p>
+
+- **Entorno y flujo principal:** Inicializa la configuración de red, establece la conexión con el broker MQTT y crea o abre la base de datos local (SQLite) para el almacenamiento de registros históricos.
+- **Módulo de comunicación MQTT:** Se suscribe a los tópicos relevantes para recibir los datos enviados por el ESP32, y puede publicar comandos de control (por ejemplo, para apagar alarmas).
+- **Módulo de procesamiento:** Parsea la información recibida en json desde el tópico MQTT para poder separar y acceder a sus valores de temoeratura, gas, llama, alerta y mensaje.
+- **Módulo de persistencia de datos:** Guarda los datos de sensores junto con marcas de tiempo en la base de datos local, garantizando un respaldo histórico de la información recibida.
+- **Módulo de reenvío a la nube:** Transfiere los datos procesados a plataformas de monitoreo remoto como Ubidots, asegurando que los usuarios puedan visualizar información en tiempo real desde cualquier ubicación.
+- **Módulo de control de alarma remota:** Permite enviar comandos desde la nube para desactivar la alarma física conectada al ESP32, cerrando así el ciclo de control remoto del sistema.
+
+<p align="justify"> La colaboración entre el ESP32 y la Raspberry Pi permite una solución de monitoreo robusta, que no solo detecta eventos de riesgo en tiempo real, sino que también ofrece almacenamiento de datos, visualización remota y control de alarmas a través de la nube. </p>
+
 
 ### Esquemático de Hardware
 
