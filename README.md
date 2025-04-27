@@ -363,7 +363,7 @@ El sistema IoT desarrollado para la detección de incendios utilizando ESP32, Ra
 
 ### 8.1 Actas de Reuniones
 
-Las actas de las reuniones del proyecto se encuentran disponibles en la carpeta **Diagramas** del repositorio. Se pueden consultar para obtener más información sobre las discusiones, decisiones y acciones tomadas durante el desarrollo del sistema.
+Las actas de las reuniones del proyecto se encuentran disponibles en la carpeta **Actas de Reunión** del repositorio. Se pueden consultar para obtener más información sobre las discusiones, decisiones y acciones tomadas durante el desarrollo del sistema.
 
 ### 8.2 Códigos Fuente de los Dispositivos
 
