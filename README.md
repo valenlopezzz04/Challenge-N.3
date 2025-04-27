@@ -257,9 +257,9 @@ Para garantizar que el sistema desarrollado sea seguro, eficiente y cumpla con p
 
 El sistema experimental fue diseñado para monitorear condiciones ambientales críticas (temperatura, gas y llama) en un área de riesgo de incendio, utilizando una arquitectura IoT. La configuración involucró los siguientes componentes y etapas:
 
-- **Nodos de sensado (ESP32)**: El modulo ESP32 fue configurado para leer datos de sensores de temperatura, gas y llama. Estos sensores fueron calibrados para detectar cambios rápidos en las condiciones ambientales, específicamente la temperatura y la presencia de gases inflamables o humo. El ESP32 fue programado para realizar lecturas periódicas de estos sensores y transmitir los datos mediante MQTT. Adicionalmente, el ESP32 alojó un servidor web embebido (EWS), diseñado con HTML, CSS y JavaScript, que permitió el monitoreo local de los valores de los sensores desde dispositivos conectados a la misma red Wi-Fi.
+- **Nodo de sensado (ESP32)**: El modulo ESP32 fue configurado para leer datos de sensores de temperatura, gas y llama. Estos sensores fueron calibrados para detectar cambios rápidos en las condiciones ambientales, específicamente la temperatura y la presencia de gases inflamables o humo. El ESP32 fue programado para realizar lecturas periódicas de estos sensores y transmitir los datos mediante MQTT. Adicionalmente, el ESP32 alojó un servidor web embebido (EWS), diseñado con HTML, CSS y JavaScript, que permitió el monitoreo local de los valores de los sensores desde dispositivos conectados a la misma red Wi-Fi.
 
-- **Gateway (Raspberry Pi)**: La Raspberry Pi actuó como el intermediario entre los nodos de sensado y la nube, utilizando el protocolo MQTT para recibir los datos desde el ESP32 y procesarlos. Se configuró Mosquitto en la Raspberry Pi, permitiendo que actuara como broker MQTT local, gestionando la comunicación entre los nodos de sensado y el gateway de manera independiente de servicios externos. La Raspberry Pi se configuró con un cliente MQTT que se suscribe al tópico de datos del ESP32, lo almacena en una base de datos SQLite local para persistencia temporal, y luego retransmite estos datos a la plataforma Ubidots a través de una conexión HTTP segura.
+- **Gateway (Raspberry Pi)**: La Raspberry Pi actuó como el intermediario entre el nodo de sensado y la nube, utilizando el protocolo MQTT para recibir los datos desde el ESP32 y procesarlos. Se configuró Mosquitto en la Raspberry Pi, permitiendo que actuara como broker MQTT local, gestionando la comunicación entre el nodo de sensado y el gateway de manera independiente de servicios externos. La Raspberry Pi se configuró con un cliente MQTT que se suscribe al tópico de datos del ESP32, lo almacena en una base de datos SQLite local para persistencia temporal, y luego retransmite estos datos a la plataforma Ubidots a través de una conexión HTTP segura.
 
 - **Plataforma de visualización (Ubidots)**: Ubidots fue elegido como la plataforma en la nube para visualizar los datos en tiempo real. Los datos procesados por la Raspberry Pi fueron enviados, donde se organizaron en un dashboard que permitía visualizar las condiciones ambientales (temperatura, gas y llama) de manera remota, a través de gráficos y alertas.
 
@@ -288,7 +288,7 @@ El sistema experimental fue diseñado para monitorear condiciones ambientales cr
 
 ### Análisis
 
-- **Uso de MQTT**: El protocolo MQTT demostró ser adecuado para la transmisión de datos entre los nodos y la Raspberry Pi. La facilidad de integración con Ubidots y la capacidad de enviar pequeños paquetes de datos con alta frecuencia fueron ventajas significativas. No obstante, los problemas de **reconexión MQTT** fueron un desafío, especialmente cuando se producían caídas de la red.
+- **Uso de MQTT**: El protocolo MQTT demostró ser adecuado para la transmisión de datos entre el ESP32 y la Raspberry Pi. La facilidad de integración con Ubidots y la capacidad de enviar pequeños paquetes de datos con alta frecuencia fueron ventajas significativas. No obstante, los problemas de **reconexión MQTT** fueron un desafío, especialmente cuando se producían caídas de la red.
 
 - **Eficiencia en la transmisión de datos**: La configuración de la conexión MQTT fue optimizada para garantizar que los datos fueran enviados de manera confiable. Sin embargo, la **latencia** observada entre el nodo y la nube (2-3 segundos) fue aceptable en función de los requerimientos del proyecto, pero podría mejorarse con una red más robusta. Cabe resaltar que, en contraste, la actualización del estado y la desactivación de alarmas físicas a través del servidor web embebido (EWS) local del ESP32 fue prácticamente instantánea, ya que no dependía de la transmisión de datos a servidores externos.
 
@@ -303,7 +303,7 @@ El sistema experimental fue diseñado para monitorear condiciones ambientales cr
 
 1. **Automatización de pruebas**: Durante el proceso, se identificó que la automatización de pruebas podría haber reducido el tiempo de validación. Scripts de pruebas automáticas para verificar la conexión MQTT, la recepción de datos en Ubidots y las alertas podrían haber sido implementados para validar cada parte del sistema sin necesidad de intervención manual.
 
-2. **Monitoreo y depuración de MQTT**: Utilizar herramientas como **MQTT Explorer** hubiera permitido monitorear los tópicos MQTT en tiempo real, lo que hubiera facilitado la identificación de problemas en la conexión entre los nodos y la Raspberry Pi.
+2. **Monitoreo y depuración de MQTT**: Utilizar herramientas como **MQTT Explorer** hubiera permitido monitorear los tópicos MQTT en tiempo real, lo que hubiera facilitado la identificación de problemas en la conexión entre el ESP32 y la Raspberry Pi.
 
 3. **Mejora en la estructura de alertas**: Se podría mejorar el protocolo de alertas implementando más umbrales de temperatura y gas, permitiendo una mayor sensibilidad ante variaciones menores en las condiciones ambientales.
 
@@ -331,7 +331,7 @@ El sistema IoT desarrollado para la detección de incendios utilizando ESP32, Ra
 
 ### Retos Presentados Durante el Desarrollo del Proyecto
 
-1. **Problemas de conexión entre los dispositivos**: La conexión intermitente entre los nodos y la Raspberry Pi fue uno de los primeros desafíos. Este problema se debió a configuraciones iniciales incorrectas de los tópicos MQTT y los parámetros de conexión. A pesar de que se intentaron varias soluciones, la estabilidad solo se logró después de ajustar adecuadamente los parámetros de conexión y los tópicos MQTT. 
+1. **Problemas de conexión entre los dispositivos**: La conexión intermitente entre el ESP32 y la Raspberry Pi fue uno de los primeros desafíos. Este problema se debió a configuraciones iniciales incorrectas de los tópicos MQTT y los parámetros de conexión. A pesar de que se intentaron varias soluciones, la estabilidad solo se logró después de ajustar adecuadamente los parámetros de conexión y los tópicos MQTT. 
 
 2. **Dificultades en la visualización en Ubidots**: Uno de los problemas más significativos fue la correcta visualización de los datos en la plataforma Ubidots. Inicialmente, los datos no se visualizaban correctamente debido a errores en el formato del mensaje JSON. Sin embargo, después de realizar los ajustes necesarios, los datos comenzaron a llegar de manera precisa y se reflejaron en los dashboards de Ubidots, permitiendo la visualización en tiempo real.
 
@@ -349,7 +349,6 @@ El sistema IoT desarrollado para la detección de incendios utilizando ESP32, Ra
 3. **Desarrollo de pruebas automatizadas**: Crear un conjunto de pruebas automatizadas que valide la **conexión MQTT**, **funcionamiento de sensores** y la **integridad de los datos** antes de su envío a la nube.
 
 4. **Redundancia en la transmisión de datos**: Se podría añadir una capa de redundancia para asegurar que los datos críticos sean enviados correctamente incluso en condiciones de red inestable.
-
 </p>
 
 
