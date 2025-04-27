@@ -198,6 +198,28 @@ Finalmente, Este ciclo de captura, procesamiento y comunicación se repite aprox
 
 
 ### Esquemático de Hardware
+En seguida, se muestra el diagrama que representa el Esquemático de Hardware de la solución planteada.
+
+![Esquemático de hardware de la solución](Diagramas/EsquematicoHardware2.png)
+*Figura 3: Esquemático de hardware de la solución propuesta.*
+
+<p align="justify"> 
+Para la simulación en Wokwi con el ESP32, se utilizó un sensor de temperatura real. Sin embargo, debido a la falta de disponibilidad de sensores de gas y llama en la plataforma, se optó por simular su comportamiento utilizando un potenciómetro y un botón, respectivamente.
+</p>
+
+- **Simulación del sensor de gas:** Se empleó un potenciómetro conectado a un pin analógico, permitiendo ajustar manualmente el valor que representaba la concentración de gas. Aunque Wokwi dispone de un sensor de gas que mide en ppm, se decidió utilizar el potenciómetro para mantener la coherencia con la lógica del código, que no trabaja con unidades específicas de concentración, sino con un umbral predefinido para activar la alerta.
+
+- **Simulación del sensor de llama:** Se utilizó un botón como entrada digital para indicar la presencia de fuego. Al presionar el botón, se generaba una señal de activación similar a la que enviaría un sensor de llama real.
+
+<p align="justify"> 
+Además de estos elementos, el sistema cuenta con un buzzer, que se activa en caso de detectar una condición de alarma, y un LED RGB, que cambia de color en función del estado del sistema (verde y rojo). Para su correcta conexión, se utilizaron resistencias de 4.7 kΩ y 220 Ω, asegurando la adecuada polarización y protección de los componentes.
+</p>
+<p align="justify"> 
+El código fue diseñado para gestionar tanto el sensor de temperatura como los componentes simulados, activando las alertas correspondientes según las lecturas obtenidas. Posteriormente, al trasladar el proyecto a la implementación física, se conectaron los sensores reales de temperatura, gas y llama, utilizando los mismos pines definidos en la simulación. Gracias a esta correspondencia, los ajustes en el código fueron mínimos, asegurando un comportamiento consistente entre la simulación y la implementación real. Por tanto, se puede decir que este proceso confirmó que el diseño inicial en la simulación era válido y funcional para su ejecución en hardware físico, validando la viabilidad del sistema antes de su construcción.
+</p>
+
+#### **Nota sobre la Raspberry Pi:**
+<p align="justify"> En cuanto a la Raspberry Pi utilizada en la solución, no fue necesario realizar un esquemático de hardware detallado, ya que este dispositivo únicamente se conecta a la fuente de alimentación y a una tarjeta microSD. No se utilizaron conexiones directas a sensores o actuadores mediante pines GPIO en esta etapa del proyecto, enfocándose su función en el procesamiento y comunicación de datos. </p>
 
 ### Estándares de Ingeniería Aplicados
 
