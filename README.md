@@ -194,3 +194,751 @@ Para que el sistema sea eficiente y funcional, se definieron los siguientes crit
 ## 7. Referencias
 
 ## 8. Anexos
+
+### Código fuente de ESP32:
+```
+#include <WiFi.h>
+#include <WebServer.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+
+// ========================== HTML PARA EL TABLERO ==========================
+const char* htmlPage = R"rawliteral(
+  <!DOCTYPE html>
+  <html lang="es">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Monitor de Incendios</title>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+      <style>
+          body {
+              font-family: Arial, sans-serif;
+              text-align: center;
+              background-color: #f4f4f4;
+              margin: 0;
+              padding: 0;
+          }
+          .container {
+              text-align: center;
+              max-width: 100%;
+              margin: 20px auto;
+              padding: 20px;
+              background: white;
+              border-radius: 10px;
+              box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          }
+          h1 {
+              color: #333;
+          }
+          .status {
+              font-size: 20px;
+              margin: 10px 0;
+          }
+          .alert {
+              color: red;
+              font-weight: bold;
+          }
+          .safe {
+              color: green;
+          }
+          .button {
+              display: inline-block;
+              padding: 10px 20px;
+              margin-top: 20px;
+              font-size: 16px;
+              color: white;
+              background-color: #007BFF;
+              border: none;
+              border-radius: 5px;
+              cursor: pointer;
+          }
+          .button:hover {
+              background-color: #0056b3;
+          }
+          table {
+              width: 100%;
+              max-width: 600px; // Ajusta según el tamaño que desees 
+              margin: auto; // Centra la tabla
+              border-collapse: collapse;
+          } 
+          th, td {
+              padding: 10px;
+              text-align: center;
+              border-bottom: 1px solid #ddd;
+          }
+          thead {
+              color: white;
+              background-color: #007BFF;
+          }
+      </style>
+  </head>
+  <body>
+  <div class="container">
+      <h1>Monitor de Incendios - Cerro Oriental</h1>
+      <p id="alerta" class="status safe">Cargando...</p>
+      <p class="status"><strong>Temperatura:</strong> <span id="temp">--</span></p>
+      <p class="status"><strong>Gas:</strong> <span id="gas">--</span></p>
+      <p class="status"><strong>Llama:</strong> <span id="llama">--</span></p>
+      <button class="button" onclick="resetAlarm()">Apagar Alarma</button>
+  </div>
+  <div class="container">
+      <h2>Historial de Mediciones</h2>
+      <table border="1">
+          <thead>
+              <tr>
+                  <th>Tiempo</th>
+                  <th>Temperatura (°C)</th>
+                  <th>Gas</th>
+                  <th>Llama</th>
+              </tr>
+          </thead>
+          <tbody id="historial-body">
+              <!-- Aquí se insertarán las filas dinámicamente -->
+          </tbody>
+      </table>
+  </div>
+  <script type="text/javascript" src="/script.js"></script>
+  </body>
+  </html>
+  )rawliteral";
+
+// ========================== CONFIGURACIÓN WiFi ==========================
+const char* ssid = "iPhone Ana (5)";   // Cambia esto por el nombre del hotspot del iPhone
+const char* password = "Toby3333";  // Cambia esto por tu contraseña
+
+WebServer server(80);
+
+SemaphoreHandle_t dataMutex;
+
+const char* mqtt_server = "raspberrypi.local";  // IP de Raspberry Pi
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const char* mqtt_topic = "sensores/datos";
+
+// Código JavaScript incrustado en una cadena
+const char script_js[] PROGMEM = R"rawliteral(// Variable global para almacenar el historial de datos
+  let historial = [];
+
+  function fetchData() {
+    fetch('/data')
+        .then(response => response.json())
+        .then(data => {
+            // Actualizar valores en la interfaz
+            document.getElementById("temp").innerText = data.temperatura + "°C";
+            document.getElementById("gas").innerText = data.gas;
+            document.getElementById("llama").innerText = data.llama ? "🔥 Detectada" : "✅ No detectada";
+
+            // Usar el mensaje real del LCD en la alerta
+            let alertaElem = document.getElementById("alerta");
+            alertaElem.innerText = data.mensaje;
+
+            // Cambiar estilo visual de la alerta
+            if (data.alerta) {
+                alertaElem.classList.add("alert");
+                alertaElem.classList.remove("safe");
+            } else {
+                alertaElem.classList.add("safe");
+                alertaElem.classList.remove("alert");
+            }
+
+            // Guardar en historial y actualizar la tabla
+            agregarRegistroHistorial(data);
+        })
+        .catch(error => console.error("Error obteniendo datos:", error));
+}
+
+function agregarRegistroHistorial(data) {
+    // Obtener la hora actual
+    let hora = new Date().toLocaleTimeString();
+    
+    // Agregar nuevo registro al historial
+    historial.push({
+        tiempo: hora,
+        temperatura: data.temperatura,
+        gas: data.gas,
+        llama: data.llama ? "🔥 Detectada" : "✅ No detectada"
+    });
+
+    // Limitar a los últimos 10 registros para que no se desborde la tabla
+    if (historial.length > 10) {
+        historial.shift();
+    }
+
+    // Actualizar la tabla
+    actualizarTabla();
+}
+
+function actualizarTabla() {
+    let tabla = document.getElementById("historial-body");
+    tabla.innerHTML = ""; // Limpiar la tabla antes de actualizar
+
+    historial.forEach(registro => {
+        let fila = `<tr>
+            <td>${registro.tiempo}</td>
+            <td>${registro.temperatura}°C</td>
+            <td>${registro.gas}</td>
+            <td>${registro.llama}</td>
+        </tr>`;
+        tabla.innerHTML = fila + tabla.innerHTML;
+    });
+}
+
+function resetAlarm() {
+        console.log("Enviando solicitud para apagar la alarma...");
+        fetch('/reset_alarm')
+            .then(response => response.text())
+            .then(() => {
+                console.log("Alarma apagada correctamente");
+                document.getElementById("alerta").innerText = "Estado Normal";
+                document.getElementById("alerta").classList.add("safe");
+                document.getElementById("alerta").classList.remove("alert");
+            })
+            .catch(error => {
+                console.error("Error al resetear la alarma:", error);
+            });
+}
+
+// Cargar datos al inicio y actualizar cada 5 segundos
+window.onload = fetchData;
+setInterval(fetchData, 5000);
+)rawliteral";
+
+// Manejar la petición del archivo script.js
+void handleScriptJS() {
+  server.send(200, "application/javascript", script_js);
+}
+
+// ========================== DEFINICIÓN DE PINES ==========================
+// Pines de los sensores
+#define TEMP_SENSOR_PIN 15   // Pin digital para el sensor de temperatura 
+#define FLAME_SENSOR_PIN 4   // Pin digital para el sensor de llama
+#define GAS_SENSOR_PIN 35    // Pin analógico para el sensor de gas MQ-2
+
+// Pines de los actuadores
+#define BUZZER_SENSOR_PIN 18 // Pin digital para el zumbador
+#define LED_RED_PIN 5        // Pin digital para componente rojo del LED RGB
+#define LED_GREEN_PIN 19     // Pin digital para componente verde del LED RGB
+
+#define SDA_PIN 22           // Pin digital para el SDA de la pantalla LCD I2C
+#define SCL_PIN 23           // Pin digital para el SCL de la pantalla LCD I2C
+
+// Configuración de la pantalla LCD I2C
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// Configuración del sensor de temperatura
+OneWire oneWire(TEMP_SENSOR_PIN);
+DallasTemperature sensors(&oneWire);
+
+
+// ========================== PARÁMETROS DEL SISTEMA ==========================
+#define MAX_TEMPS 5  // Número de muestras de temperatura almacenadas
+
+// Variables de almacenamiento de valores de sensores
+float temperature;
+int flameState;
+int gasValue;
+unsigned long tiempoActual;
+
+// Umbrales de alerta
+const float TEMP_LIMITE = 27;                  // Temperatura máxima permitida antes de alerta
+const float TEMP_AUMENTO_RAPIDO = 0.5;           // Incremento rápido de temperatura en °C
+const int GAS_LIMITE = 3200;                     // Límite de concentración de gas
+
+const unsigned long DURACION_ALERTA = 3000;      // Duración de alerta estándar (ms)
+const unsigned long DURACION_INCENDIO = 8000;    // Duración de alerta por incendio (ms)
+const unsigned long INTERVALO_TIEMPO = 10000;    // Duración entre cada toma de medida para la temperatura
+
+// Variables de almacenamiento de temperatura
+float temperaturas[MAX_TEMPS] = {20.0, 20.0, 20.0, 20.0, 20.0};   // Inicializa con 20°C
+int indice = 0;                     // Índice de la próxima lectura a almacenar
+float temperaturaAnterior = 20.0;   // Inicializa con 20°C
+
+// Variables de tiempo para alertas
+unsigned long tiempoUltimaMedicion = 0;     // Guarda el tiempo de la última medicion de la temperatura
+unsigned long tiempoAlerta = 0;             // Guarda el tiempo de inicio de la alerta
+unsigned long tiempoIncendio = 0;           // Guarda el tiempo de inicio de la alerta de incendio
+unsigned long tiempoAlarmaDesactivada = 0;  // Guarda el tiempo en el que se desactivó la alarma manualmente
+const unsigned long tiempoEspera = 10000;   // 10 segundos de gracia para reactivar la alarma
+
+bool alerta = false;                // Inicializa estado de alerta
+bool esIncendio = false;            // Inicializa estado de alerta incendio
+String mensaje = "Estado Normal";   // Inicializa mensaje de alerta del LCD con estado normal
+bool alarmaManualOff = false;       // Falso por defecto, significa que no ha sido apagada manualmente
+
+// ========================== LECTURA DE SENSORES ==========================
+// Captura los valores de los sensores de temperatura, llama y gas
+void leerSensores() {
+  sensors.requestTemperatures();
+  temperature = sensors.getTempCByIndex(0);    // Leer temperatura
+  flameState = digitalRead(FLAME_SENSOR_PIN);  // Leer estado del sensor de llama (0 indica llama detectada)
+  gasValue = analogRead(GAS_SENSOR_PIN);       // Leer nivel del sensor de gas
+}
+
+// ========================== MANEJO DE HISTORIAL DE TEMPERATURAS ==========================
+// Actualiza los valores que hacen parte del registro de temperaturas
+void actualizarHistorialTemperaturas() {
+  temperaturas[indice] = temperature;
+  indice = (indice + 1) % MAX_TEMPS;
+}
+
+// ========================== MANEJO DE ALERTAS ==========================
+// Analiza los valores de los sensores y determina si se activa una alerta
+void manejarAlertas() { 
+  float incremento = temperature - temperaturaAnterior; // Comparación con la medición de hace 10 segundos
+
+  // Si han pasado 10 segundos, actualizamos la referencia de temperatura
+  if (tiempoActual - tiempoUltimaMedicion >= INTERVALO_TIEMPO) {
+    temperaturaAnterior = temperature;
+    tiempoUltimaMedicion = tiempoActual;
+  }
+
+  // Evaluar condiciones individuales
+  bool tempAlta = (incremento >= TEMP_AUMENTO_RAPIDO || temperature >= TEMP_LIMITE);
+  bool llamaDetectada = (flameState == LOW);
+  bool gasDetectado = (gasValue > GAS_LIMITE);
+
+  bool enTiempoGracia = alarmaManualOff && (tiempoActual - tiempoAlarmaDesactivada < tiempoEspera);
+
+  // Si estamos en tiempo de gracia, forzar salir
+  if (enTiempoGracia) {
+    alerta = false;
+    return;
+  }
+
+  // Evaluar si se debe activar la alerta
+  bool nuevaAlerta = tempAlta || llamaDetectada || gasDetectado;
+  bool dentroDeDuracion = (tiempoActual - tiempoAlerta < DURACION_ALERTA) ||
+                          (esIncendio && tiempoActual - tiempoIncendio < DURACION_INCENDIO);
+
+  if (nuevaAlerta || dentroDeDuracion) {
+      alerta = true;
+      tiempoAlerta = nuevaAlerta ? tiempoActual : tiempoAlerta;
+      esIncendio = (llamaDetectada && gasDetectado) || (llamaDetectada && tempAlta);
+
+      if (esIncendio) {
+          tiempoIncendio = tiempoActual;
+          mensaje = "ALERTA: INCENDIO";
+      } else if (tempAlta) {
+          mensaje = "ALERTA: Temp alta!";
+      } else if (llamaDetectada) {
+          mensaje = "ALERTA: Llama!";
+      } else if (gasDetectado) {
+          mensaje = "ALERTA: Gas!";
+      }
+  } else {
+      alerta = false;
+  }
+}
+
+// ========================== ACTUALIZACIÓN DEL LCD ==========================
+// Muestra en la pantalla la temperatura y el estado actual del entorno
+void actualizarLCD() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Temp:");
+  lcd.print(temperature);
+  lcd.print("C");
+
+  lcd.setCursor(0, 1);
+  lcd.print(mensaje);
+}
+
+// ========================== CONTROL DE ACTUADORES ==========================
+// Activa o desactiva el LED RGB y el buzzer según el estado del sistema
+void manejarActuadores() {
+  if (alerta && !alarmaManualOff) {
+    digitalWrite(LED_RED_PIN, LOW);
+    digitalWrite(LED_GREEN_PIN, HIGH);
+    digitalWrite(BUZZER_SENSOR_PIN, LOW);
+  } else {
+    digitalWrite(LED_RED_PIN, HIGH);
+    digitalWrite(LED_GREEN_PIN, LOW);
+    digitalWrite(BUZZER_SENSOR_PIN, HIGH);
+  }
+}
+
+// Función para crear el JSON con los datos de los sensores
+String generarJSON() {
+  String json = "{";
+  json += "\"temperatura\":" + String(temperaturas[(indice - 1 + MAX_TEMPS) % MAX_TEMPS]) + ",";
+  json += "\"gas\":" + String(analogRead(GAS_SENSOR_PIN)) + ",";
+  json += "\"llama\":" + String(digitalRead(FLAME_SENSOR_PIN) == LOW) + ",";
+  json += "\"alerta\":" + String(alerta ? "true" : "false") + ",";
+  json += "\"mensaje\":\"" + mensaje + "\"";
+  json += "}";
+
+  return json;
+}
+
+// ========================== TRANSMISION DE DATOS ==========================
+// Reconectar con broker MQTT
+void reconnectMQTT() {
+  int attempt = 0;
+  while (!client.connected() && attempt < 10) {
+    Serial.print("Conectando al broker MQTT...");
+    if (client.connect("ESP32Client")) {
+      Serial.println("MQTT conectado");
+      client.subscribe("esp32/reset_alarma");
+    } else {
+      Serial.print("Falló la conexión, rc=");
+      Serial.print(client.state());
+      Serial.println(" reintentando en 5 segundos");
+      delay(5000);
+      attempt++;
+    }
+  }
+  if (attempt == 10) {
+    Serial.println("No se pudo conectar después de 10 intentos.");
+  }
+}
+
+// Publicar los datos de los sensores usando MQTT
+void enviarDatosMQTT() {
+  if (!client.connected()) {
+    reconnectMQTT();
+  }
+
+  String payload = generarJSON();
+
+  if (client.publish(mqtt_topic, payload.c_str())) {
+    Serial.println("Mensaje enviado por MQTT: " + payload);
+  } else {
+    Serial.println("Error al enviar mensaje MQTT.");
+  }
+}
+
+// Escuchar el mensaje del tablero de Ubidots sobre el botón de apagado en un callback
+void callback(char* topic, byte* payload, unsigned int length) {
+  String message;
+  for (int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+
+  Serial.print("Mensaje recibido [");
+  Serial.print(topic);
+  Serial.print("]: ");
+  Serial.println(message);
+
+  // Parsear el JSON recibido
+  StaticJsonDocument<200> doc;
+  DeserializationError error = deserializeJson(doc, message);
+
+  if (error) {
+    Serial.print("Error al parsear JSON: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  float valorBoton = doc["value"];  // Extraer el valor del botón
+
+  Serial.print("Valor del botón recibido: ");
+  Serial.println(valorBoton);
+
+  // Responder a botón manual Ubidots
+  if (valorBoton == 1.0) {
+    alarmaManualOff = true;  // Indicar que se apagó manualmente
+    tiempoAlarmaDesactivada = millis();  // Guardar el tiempo en que se desactivó la alarma
+    alerta = false;  // Desactivar la alerta
+    digitalWrite(BUZZER_SENSOR_PIN, HIGH);  // Apagar el buzzer (lógica negativa)
+    digitalWrite(LED_RED_PIN, HIGH);  // Apagar LED rojo
+    digitalWrite(LED_GREEN_PIN, LOW); // Encender LED verde
+
+    Serial.println("Alarma desactivada manualmente desde Ubidots.");
+  } else {
+    Serial.println("Valor distinto de 1.0 recibido.");
+  }
+}
+
+// ========================== LECTURA DE SENSORES EN SEGUNDO HILO ==========================
+// Función de la tarea para leer los sensores periódicamente
+void leerSensoresTask(void *pvParameters) {
+  while (true) {
+    if (xSemaphoreTake(dataMutex, portMAX_DELAY)) {
+      leerSensores();
+      tiempoActual = millis();
+      xSemaphoreGive(dataMutex);
+    }
+    vTaskDelay(pdMS_TO_TICKS(1000)); // Espera 1000ms antes de la próxima lectura
+  }
+}
+
+
+// ========================== TRANSMISIÓN DE DATOS EN TERCER HILO ==========================
+// Función de la tarea para transmitir los datos en MQTT
+void enviarDatosTask(void* parameter) {
+  while (true) {
+    if (xSemaphoreTake(dataMutex, portMAX_DELAY)) {
+      enviarDatosMQTT();
+      xSemaphoreGive(dataMutex);
+    }
+    vTaskDelay(pdMS_TO_TICKS(3000)); // Espera 3000ms antes de la próxima publicación
+  }
+}
+
+// ========================== CONFIGURACIÓN INICIAL ==========================
+void setup() {
+  Serial.begin(115200);
+
+  dataMutex = xSemaphoreCreateMutex(); // Crear un mutex (semaphore binario) global para proteger secciones críticas
+
+  // Conectar a WiFi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Conectando a WiFi...");
+  }
+  Serial.println("Conectado a WiFi");
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+
+  // Configuración de pines
+  pinMode(BUZZER_SENSOR_PIN, OUTPUT);
+  pinMode(LED_RED_PIN, OUTPUT);
+  pinMode(LED_GREEN_PIN, OUTPUT);
+  pinMode(FLAME_SENSOR_PIN, INPUT);
+
+  // Inicialización de I2C y sensores
+  Wire.begin(SDA_PIN, SCL_PIN);
+  lcd.begin(16, 2);
+  lcd.setBacklight(255);
+  sensors.begin();
+
+  // Mensaje de inicio en LCD
+  lcd.setCursor(0, 0);
+  lcd.print("Sistema Alerta");
+  lcd.setCursor(0, 1);
+  lcd.print("Iniciando...");
+  delay(2000);
+  lcd.clear();
+
+  // ========================== SERVIDOR WEB ==========================
+  // Ver el dashboard con gráficos
+  server.on("/", HTTP_GET, []() {
+    server.send(200, "text/html", htmlPage);
+  });
+
+  // Servir el archivo JavaScript
+  server.on("/script.js", HTTP_GET, handleScriptJS);
+
+  // Acceder a los datos en formato JSON a través de la ruta /data
+  server.on("/data", HTTP_GET, []() {
+    String json = generarJSON();
+    server.send(200, "application/json", json);
+  });
+
+  // Conectar al broker MQTT
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  reconnectMQTT();
+
+  // Apagar la alarma desde la web
+  server.on("/reset_alarm", HTTP_GET, []() {
+    alarmaManualOff = true;  // Indicar que se apagó manualmente
+    tiempoAlarmaDesactivada = millis();  // Guardar el tiempo en que se desactivó la alarma
+    alerta = false;  // Desactivar la alerta
+    digitalWrite(BUZZER_SENSOR_PIN, HIGH);  // Apagar el buzzer (lógica negativa)
+    digitalWrite(LED_RED_PIN, HIGH);  // Apagar LED rojo
+    digitalWrite(LED_GREEN_PIN, LOW); // Encender LED verde
+    server.send(200, "text/html", "<h1>Alarma Apagada</h1><a href='/'>Volver</a>");
+  });
+
+  // ========================== CREAR SEGUNDO HILO PARA SENSORES ==========================
+  xTaskCreate(
+    leerSensoresTask, // Función de la tarea
+    "SensorTask",     // Nombre de la tarea
+    4096,             // Tamaño del stack
+    NULL,             // Parámetro de entrada
+    1,                // Prioridad
+    NULL              // Handle de la tarea
+  );
+
+  server.begin();  // Inicia servidor 
+
+  // ========================== CREAR TERCER HILO PARA TRANSMISIÓN ==========================
+  xTaskCreate(
+    enviarDatosTask,    // Función de la tarea
+    "TransmisionTask",  // Nombre de la tarea
+    4096,               // Tamaño del stack
+    NULL,               // Parámetro de entrada
+    2,                  // Prioridad
+    NULL                // Handle de la tarea
+  );
+}
+
+// ========================== BUCLE PRINCIPAL ==========================
+// Ejecuta la lógica de monitoreo continuamente
+void loop() {
+  server.handleClient();
+  client.loop();
+  
+  if (xSemaphoreTake(dataMutex, portMAX_DELAY)) {
+    if (alarmaManualOff) {
+      if (millis() - tiempoAlarmaDesactivada >= tiempoEspera) {
+          alarmaManualOff = false;  // Permitir que la alarma se reactive después de 10 segundos
+      }
+    }
+
+    actualizarHistorialTemperaturas();     // Actualizar el registro de temperaturas
+
+    // Determinar si se debe activar una alerta
+    manejarAlertas();
+
+    // Respetar la duración de alerta e incendio
+    if (!alarmaManualOff && (millis() - tiempoAlerta < DURACION_ALERTA || millis() - tiempoIncendio < DURACION_INCENDIO)) {
+      alerta = true;
+      if (millis() - tiempoIncendio < DURACION_INCENDIO) {
+        mensaje = "ALERTA: INCENDIO";
+      }
+    } else {
+      // Si no estamos en alerta y no hay peligro, mostrar Estado Normal
+      if (!alerta && !(temperature >= TEMP_LIMITE || flameState == LOW || gasValue > GAS_LIMITE)) {
+        mensaje = "Estado Normal";
+      }
+    }
+
+    actualizarLCD();        // Mostrar en LCD el estado actual
+    manejarActuadores();    // Controlar los actuadores (LED y buzzer)
+    xSemaphoreGive(dataMutex);
+  }
+
+  delay(100);  // Esperar 100ms antes de la próxima iteración
+}
+```
+
+### Código fuente de Raspberry Pi:
+```
+import paho.mqtt.client as mqtt
+import sqlite3
+import json
+import time
+
+# Conexión a base de datos SQLite (se crea si no existe)
+db = sqlite3.connect("sensores_db", check_same_thread=False)
+cursor = db.cursor()
+
+# Asegurarse de que la tabla exista
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS datos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    temperatura REAL,
+    gas INTEGER,
+    llama BOOLEAN,
+    alerta BOOLEAN,
+    mensaje TEXT
+)
+''')
+db.commit()
+
+# Token Ubidots
+UBIDOTS_TOKEN = "BBUS-rNyGEgYnILjIm80p8uX89MqlfoNKRu"
+UBIDOTS_DEVICE = "raspberry-sensor-node"
+UBIDOTS_TOPIC = f"/v1.6/devices/{UBIDOTS_DEVICE}"
+UBIDOTS_RESET_TOPIC = f"/v1.6/devices/{UBIDOTS_DEVICE}/reset_alarma"
+
+# MQTT cliente para enviar datos a Ubidots
+ubidots_client = mqtt.Client()
+
+# Agregar callback para verificar conexión
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("✅ Conectado correctamente a Ubidots")
+    else:
+        print("❌ Error de conexión a Ubidots. Código:", rc)
+
+ubidots_client.on_connect = on_connect
+ubidots_client.username_pw_set(UBIDOTS_TOKEN, "")
+ubidots_client.connect("industrial.api.ubidots.com", 1883)
+ubidots_client.loop_start()  # ✅ Necesario para mantener conexión
+
+# MQTT cliente para comunicarse con ESP32
+local_broker_client = mqtt.Client()
+local_broker_client.connect("localhost", 1883)
+
+# CALLBACK: cuando llega un mensaje desde ESP32 (datos de sensores)
+def on_esp32_message(client, userdata, message):
+    try:
+        payload = json.loads(message.payload.decode())
+        print("[ESP32 ➜ Raspberry] Datos recibidos: ", payload)
+
+        temperatura = payload["temperatura"]
+        gas = payload["gas"]
+        llama = payload["llama"]
+        alerta = payload["alerta"]
+        mensaje = payload["mensaje"]
+
+        # Guardar en la base de datos local
+        sql = '''INSERT INTO datos (temperatura, gas, llama, alerta, mensaje) 
+                 VALUES (?, ?, ?, ?, ?)'''
+        datos = (temperatura, gas, llama, alerta, mensaje)
+        cursor.execute(sql, datos)
+        db.commit()
+        print("Guardado en DB local")
+
+        # Reenviar a Ubidots por MQTT (solo campos válidos numéricamente)
+        ubidots_payload = json.dumps({
+            "temperatura": temperatura,
+            "gas": gas,
+            "llama": {
+                "value": int(llama),
+                "context": {
+                    "estado": "Detectada" if llama else "No detectada"
+                }
+            },
+            "alerta": {
+                "value": int(alerta),
+                "context": {
+                    "estado": "ALERTA" if alerta else "Normal"
+                }
+            },
+            "mensaje": {
+                "value": int(alerta),
+                "context": {
+                    "descripcion": mensaje
+                }
+            }
+        })
+        ubidots_client.publish(UBIDOTS_TOPIC, ubidots_payload)
+        print("[Raspberry ➜ Ubidots] Datos enviados: ", ubidots_payload)
+
+    except Exception as e:
+        print("Error al procesar datos del ESP32:", e)
+
+# CALLBACK: cuando llega un mensaje desde Ubidots (botón de reset remoto)
+def on_ubidots_reset(client, userdata, message):
+    try:
+        payload = message.payload.decode()
+        print("[Ubidots ➜ Raspberry] Botón recibido:", payload)
+
+        # Reenviar al ESP32
+        local_broker_client.publish("esp32/reset_alarma", payload)
+        print("[Raspberry ➜ ESP32] Botón reenviado:", payload)
+
+    except Exception as e:
+        print("Error al reenviar botón:", e)
+
+# Suscriptor del broker local (recibe del ESP32)
+esp32_listener = mqtt.Client()
+esp32_listener.on_message = on_esp32_message
+esp32_listener.connect("localhost", 1883)
+esp32_listener.subscribe("sensores/datos")
+
+# Suscriptor del broker de Ubidots (recibe botón)
+ubidots_listener = mqtt.Client()
+ubidots_listener.username_pw_set(UBIDOTS_TOKEN, "")
+ubidots_listener.on_message = on_ubidots_reset
+ubidots_listener.connect("industrial.api.ubidots.com", 1883)
+ubidots_listener.subscribe(UBIDOTS_RESET_TOPIC)
+
+# Ejecutar bucles
+esp32_listener.loop_start()
+ubidots_listener.loop_forever()
+```
