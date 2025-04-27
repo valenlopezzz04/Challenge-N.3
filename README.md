@@ -120,6 +120,37 @@ Cabe resaltar que toda la lógica de adquisición, procesamiento, comunicación 
 
 
 ### Desarrollo Teórico Modular: Criterios de Diseño Establecidos
+Para que el sistema sea eficiente y funcional, se definieron los siguientes criterios de diseño:
+
+#### 1. Fiabilidad y Precisión
+- Se seleccionaron sensores adecuados para la detección confiable sobre temperatura, gases y llamas.
+- Se implementaron límites y filtros dentro del código para reducir errores y evitar falsas alarmas.
+- Se optimizó la adquisición de datos mediante procesamiento concurrente, asegurando mediciones en tiempo real.
+
+#### 2. Autonomía y Eficiencia
+- El sistema es **autosuficiente**, operando sin necesidad de conexión a redes externas para su funcionamiento básico local.
+- Su diseño es resistente a la intemperie, minimizando la necesidad de mantenimiento.
+- Se implementaron mecanismos de gestión de tareas para evitar interrupciones en la adquisición de datos y la respuesta del sistema.
+  - Se implementó **FreeRTOS**, lo que permitió la creación de un segundo y tercer hilo, mejorando la gestión del tiempo de ejecución de las tareas.
+- **Concurrencia en FreeRTOS:** La concurrencia permite que varias tareas se ejecuten de manera que parecen realizarse simultáneamente.
+  - Con **FreeRTOS**, se logró una gestión real de tareas en paralelo mediante múltiples hilos de ejecución.
+
+#### 3. Interfaz de Usuario Intuitiva
+- Se usa una **pantalla LCD** para mostrar datos en tiempo real localmente.
+- Se integró un servidor web embebido (EWS) con HTML y JavaScript para la visualización remota a nivel de red local.
+- Se incorporaron gráficos dinámicos con historial de mediciones recientes en la interfaz web.
+- Se implementaron **alarmas visuales (LED RGB) y sonoras (zumbador)** para notificaciones inmediatas sobre condiciones de riesgo.
+- Adicionalmente, se habilitó la monitorización remota a través de la nube utilizando la plataforma Ubidots, proporcionando acceso a la información desde cualquier lugar con conexión a Internet.
+
+#### 4. Escalabilidad y Modularidad
+- El sistema fue diseñado de forma **modular**, permitiendo agregar nuevos sensores o funciones en el futuro de manera sencilla.
+- Se implementó el protocolo **MQTT** como capa de comunicación entre el dispositivo ESP32 y un Gateway IoT (Raspberry Pi).
+- La Raspberry Pi no solo recibe y almacena datos localmente utilizando SQLite, sino que también actúa como puente para transmitir los datos a la nube (Ubidots) mediante MQTT.
+
+#### 5. Persistencia de Datos y Resiliencia
+- Se implementó un esquema de persistencia local mediante una base de datos SQLite en la Raspberry Pi, garantizando que los datos históricos estén disponibles incluso en caso de pérdida temporal de conexión a Internet.
+- La duplicidad de almacenamiento (local en la Raspberry Pi y en la nube con Ubidots) asegura la disponibilidad continua de la información crítica.
+
 
 ### Diagrama UML
 
