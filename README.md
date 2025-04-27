@@ -257,33 +257,36 @@ Para garantizar que el sistema desarrollado sea seguro, eficiente y cumpla con p
 
 El sistema experimental fue diseñado para monitorear condiciones ambientales críticas (temperatura, gas y llama) en un área de riesgo de incendio, utilizando una arquitectura IoT. La configuración involucró los siguientes componentes y etapas:
 
-- **Nodos de sensado (ESP32)**: Los módulos ESP32 fueron configurados para leer datos de sensores de temperatura (DHT22), gas (MQ2) y llama (FLAME). Estos sensores fueron calibrados para detectar cambios rápidos en las condiciones ambientales, específicamente la temperatura y la presencia de gases inflamables o humo. El ESP32 fue programado para realizar lecturas periódicas de estos sensores y transmitir los datos mediante MQTT.
+- **Nodos de sensado (ESP32)**: Los módulos ESP32 fueron configurados para leer datos de sensores de temperatura, gas  y llama . Estos sensores fueron calibrados para detectar cambios rápidos en las condiciones ambientales, específicamente la temperatura y la presencia de gases inflamables o humo. El ESP32 fue programado para realizar lecturas periódicas de estos sensores y transmitir los datos mediante MQTT.
 
 - **Gateway (Raspberry Pi 4B)**: La Raspberry Pi actuó como el intermediario entre los nodos de sensado y la nube, utilizando el protocolo MQTT para recibir los datos desde el ESP32 y procesarlos. La Raspberry Pi se configuró con un cliente MQTT que se suscribe al tópico de datos del ESP32, lo almacena en una base de datos SQLite local para persistencia temporal, y luego retransmite estos datos a la plataforma Ubidots a través de una conexión HTTP segura.
 
-- **Plataforma de visualización (Ubidots)**: Ubidots fue elegido como la plataforma en la nube para visualizar los datos en tiempo real. A través de la API REST de Ubidots, los datos procesados por la Raspberry Pi fueron enviados a la nube, donde se organizaron en un dashboard que permitía visualizar las condiciones ambientales (temperatura, gas y llama) de manera remota, a través de gráficos y alertas.
+- **Plataforma de visualización (Ubidots)**: Ubidots fue elegido como la plataforma en la nube para visualizar los datos en tiempo real.Los datos procesados por la Raspberry Pi fueron enviados, donde se organizaron en un dashboard que permitía visualizar las condiciones ambientales (temperatura, gas y llama) de manera remota, a través de gráficos y alertas.
 
 **Proceso de conexión de los componentes:**
 
 1. Los nodos ESP32 miden las variables ambientales y publican los resultados en el broker MQTT.
 2. La Raspberry Pi, configurada con un cliente MQTT, se suscribe al tópico específico del ESP32.
-3. Los datos recibidos se almacenan localmente en SQLite para análisis posteriores y se envían a Ubidots mediante una API HTTP.
-4. Ubidots visualiza los datos en tiempo real mediante gráficos dinámicos, con actualizaciones cada 1-2 segundos.
+3. Los datos recibidos se almacenan localmente en SQLite para análisis posteriores y se envían a Ubidots mediante MQTT.
+4. Ubidots visualiza los datos en tiempo real mediante gráficos dinámicos, con actualizaciones cada 2-3 segundos.
 
 **Ajustes técnicos importantes**:
 - Se realizó un ajuste de los **umbral de temperatura a 27°C** en el sistema de alertas para adaptar el comportamiento del sistema a las condiciones de prueba.
-- La configuración de la **API de Ubidots** y la **autenticación MQTT** fueron ajustadas a lo largo del desarrollo para asegurar una transmisión estable de los datos.
+- La configuración de  **MQTT** fueron ajustadas a lo largo del desarrollo para asegurar una transmisión estable de los datos.
 
 
 ### Resultados
 
-1. **Conexión Nodo-Gateway**: La comunicación entre los nodos ESP32 y la Raspberry Pi se logró exitosamente mediante el uso del protocolo MQTT. Se observaron pocos retrasos en la recepción de datos y en la retransmisión a la nube. Sin embargo, se identificaron problemas de **conexión intermitente** que fueron solucionados mediante el ajuste del **QoS** del protocolo y el manejo adecuado de los **tópicos MQTT**.
+1. **Conexión Nodo-Gateway**: La comunicación entre los nodos ESP32 y la Raspberry Pi se logró exitosamente mediante el uso del protocolo MQTT. Se observaron pocos retrasos en la recepción de datos y en la retransmisión a la nube. Sin embargo, se identificaron problemas de **conexión intermitente** que fueron solucionados mediante  el manejo adecuado de los **tópicos MQTT**.
 
-2. **Conexión Gateway-Ubidots**: Tras la configuración correcta de las credenciales de API en la Raspberry Pi y la validación de las rutas de comunicación, los datos fueron transmitidos a Ubidots sin errores. El **tiempo de latencia** entre la lectura de los sensores, el procesamiento por la Raspberry Pi y la actualización del dashboard en Ubidots fue de **1–2 segundos** en promedio.
+2. **Conexión Gateway-Ubidots**: Tras la configuración correcta de las credenciales de API en la Raspberry Pi y la validación de las rutas de comunicación, los datos fueron transmitidos a Ubidots sin errores. El **tiempo de latencia** entre la lectura de los sensores, el procesamiento por la Raspberry Pi y la actualización del dashboard en Ubidots fue de **2-3 segundos** en promedio.
 
 3. **Visualización de Datos**: En cuanto a la visualización en Ubidots, los datos de temperatura, gas y llama se mostraron correctamente en tiempo real en gráficos. Además, se implementaron **alertas personalizadas** en Ubidots que se activan cuando la temperatura supera los **27°C** o si se detecta presencia de gas o llama.
 
-4. **Problemas de Pruebas**: La principal dificultad fue que no se pudo usar un simulador como **Wokwi**, lo que obligó a depender completamente de las pruebas físicas. Esto incrementó significativamente el tiempo de validación y ajuste, ya que cada modificación requería una nueva prueba física de los dispositivos.
+
+
+4. **Problemas de Pruebas**: Una de las principales dificultades fue la limitación de los simuladores disponibles. Aunque se utilizó **Wokwi** para realizar la simulación del hardware y validar los esquemas de conexión, este simulador no soportaba la simulación de la parte crucial del proyecto, que era la conexión **MQTT** para la transmisión de datos entre el ESP32 y la Raspberry Pi. Debido a esta limitación, la validación del sistema se tuvo que hacer completamente en un entorno físico, lo que aumentó significativamente el tiempo de desarrollo y ajuste. Cada cambio en la configuración o en el código requería nuevas pruebas físicas de los dispositivos, lo que complicó la integración y el monitoreo en tiempo real.
+
 
 
 ### Análisis
@@ -338,13 +341,16 @@ El sistema experimental fue diseñado para monitorear condiciones ambientales cr
 El sistema IoT desarrollado para la detección de incendios utilizando ESP32, Raspberry Pi, MQTT y Ubidots demostró ser **funcional y confiable** para el monitoreo de condiciones ambientales críticas. A pesar de los desafíos técnicos, el sistema cumplió con los objetivos planteados de **visualización en tiempo real** y **alertas remotas**. La integración de la plataforma Ubidots permitió una **gestión centralizada de los datos** y facilitó la toma de decisiones rápidas en situaciones críticas.
 
 
+
 ### Retos Presentados Durante el Desarrollo del Proyecto
 
-1. **Problemas de conexión entre los dispositivos**: La conexión intermitente entre los nodos y la Raspberry Pi fue uno de los primeros desafíos. Esto se debió a configuraciones iniciales incorrectas de los tópicos MQTT y los parámetros de conexión. La reconfiguración del **QoS** y las **credenciales** ayudaron a mejorar la estabilidad.
+1. **Problemas de conexión entre los dispositivos**: La conexión intermitente entre los nodos y la Raspberry Pi fue uno de los primeros desafíos. Este problema se debió a configuraciones iniciales incorrectas de los tópicos MQTT y los parámetros de conexión. A pesar de que se intentaron varias soluciones, la estabilidad solo se logró después de ajustar adecuadamente los parámetros de conexión y los tópicos MQTT. 
 
-2. **Dificultades en la visualización en Ubidots**: Inicialmente, hubo problemas con el formato de los datos y la autenticación de la API. Afortunadamente, después de algunos ajustes, los datos comenzaron a llegar correctamente y se reflejaron en los dashboards.
+2. **Dificultades en la visualización en Ubidots**: Uno de los problemas más significativos fue la correcta visualización de los datos en la plataforma Ubidots. Inicialmente, los datos no se visualizaban correctamente debido a errores en el formato del mensaje JSON. Sin embargo, después de realizar los ajustes necesarios, los datos comenzaron a llegar de manera precisa y se reflejaron en los dashboards de Ubidots, permitiendo la visualización en tiempo real.
 
-3. **Falta de simuladores**: La imposibilidad de usar herramientas como Wokwi complicó la depuración, ya que el sistema dependía completamente de las pruebas físicas.
+3. **Dificultades con el botón de apagado de alarmas**: Durante las primeras pruebas, se presentaron dificultades con el botón de apagado de alarmas físicas, que no respondía correctamente aunque el mensaje de desactivación había sido correctamente reenviado desde Ubidots. Después de parsear el mensaje JSON correctamente, se logró que el botón funcionara como se esperaba, permitiendo la desactivación de las alarmas físicas desde la plataforma.
+
+4. **Falta de simuladores**: La imposibilidad de usar herramientas como **Wokwi** para simular la parte de MQTT complicó la depuración, ya que dependíamos completamente de las pruebas físicas para validar cada parte del sistema. Aunque Wokwi fue útil para simular el hardware y la conexión básica de los dispositivos, la falta de soporte para MQTT significó que no pudimos realizar pruebas previas a nivel de red y comunicación, lo que retrasó la detección de problemas y aumentó el tiempo de ajuste.
 
 
 ### Trabajo Futuro
