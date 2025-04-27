@@ -255,6 +255,7 @@ Para garantizar que el sistema desarrollado sea seguro, eficiente y cumpla con p
   
 </p>
 
+
 ---
 
 ## 5. Autoevaluación del Protocolo de Pruebas
@@ -262,7 +263,11 @@ Para garantizar que el sistema desarrollado sea seguro, eficiente y cumpla con p
 
 </p>
 
+
 ### Mejoras Identificadas en el Proceso de Pruebas
+
+
+
 
 ### Comparación de Desempeño con Expectativas Iniciales
 <p align="justify">
@@ -273,15 +278,30 @@ Para garantizar que el sistema desarrollado sea seguro, eficiente y cumpla con p
 
 ## 6. Conclusiones, Retos y Mejoras Futuras
 
+
+
+
 ### Conclusiones
 
+
+
+
 ### Retos Presentados Durante el Desarrollo del Proyecto
+
+
+
+
 
 ### Trabajo Futuro
 
 ---
 
 ## 7. Referencias
+
+[1] N. Bustamante, “La importancia de proteger a los cerros orientales de Bogotá,” *El Tiempo*, 26 de febrero de 2019. [Online]. Disponible en: [https://www.eltiempo.com/vida/ciencia/la-importancia-de-proteger-a-los-cerros-orientales-de-bogota-279294](https://www.eltiempo.com/vida/ciencia/la-importancia-de-proteger-a-los-cerros-orientales-de-bogota-279294). [Accedido: 12-feb-2025].  
+
+[2] El Espectador, “Incendio forestal en los cerros orientales de Bogotá: ¿Por qué se producen?,” *El Espectador*, 31 de enero de 2023. [Online]. Disponible en: [https://www.elespectador.com/cromos/famosos/incendio-forestal-en-los-cerros-orientales-de-bogota-por-que-se-producen/](https://www.elespectador.com/cromos/famosos/incendio-forestal-en-los-cerros-orientales-de-bogota-por-que-se-producen/). [Accedido: 12-feb-2025].  
+
 
 ## 8. Anexos
 
