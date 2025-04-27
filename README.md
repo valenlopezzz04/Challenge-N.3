@@ -152,7 +152,36 @@ Para que el sistema sea eficiente y funcional, se definieron los siguientes crit
 - La duplicidad de almacenamiento (local en la Raspberry Pi y en la nube con Ubidots) asegura la disponibilidad continua de la información crítica.
 
 
-### Diagrama UML
+### Diagramas UML
+<p align="justify"> 
+Las siguientes figuras ilustran los Diagramas de Actividad UML de la solución propuesta, donde se representan los flujos de ejecución del sistema de monitoreo y alerta. Para una mejor visualización, se proporcionan enlaces adicionales:
+</p>
+
+![Diagrama de actividades de la ESP32](Diagramas/DiagramaActividadesESP32.png)
+*Figura 2: Diagrama UML de actividades de la solución propuesta - ESP32.*
+
+![Diagrama de actividades de la Raspberry Pi](Diagramas/DiagramaActividadesRaspPi.png)
+*Figura 3: Diagrama UML de actividades de la solución propuesta - Raspberry Pi.*
+
+- ***Link para mejor visualización de los diagramas:*** [https://www.canva.com/design/DAGltZirFnE/EE1g_EzG_OeKU2u2RzFSxw/view?utm_content=DAGltZirFnE&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h096d0f7c1d](https://www.canva.com/design/DAGltZirFnE/EE1g_EzG_OeKU2u2RzFSxw/view?utm_content=DAGltZirFnE&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h096d0f7c1d)
+
+<p align="justify"> 
+Los diagramas representan el flujo de ejecución de cada uno de los dos componentes principales del sistema: el ESP32, que actúa como nodo de sensado y alerta, y la Raspberry Pi, que opera como centro de procesamiento y comunicación hacia la nube. </p>
+
+#### Flujo de Actividades en el ESP32
+
+<p align="justify"> 
+El ESP32 tiene la responsabilidad de la captura y procesamiento inicial de los datos de los sensores, así como de la activación de actuadores ante situaciones de riesgo. El flujo de ejecución en este dispositivo puede dividirse en cinco módulos principales: </p>
+
+- **Entorno y flujo principal:** Configura los pines de entrada y salida, inicializa la pantalla LCD, los sensores de temperatura, gas y llama, y establece las variables de estado. Además, se inicia el servidor web local para permitir la interacción con un cliente web.
+- **Módulo de sensado:** En un segundo hilo, se realiza la lectura periódica de los sensores (DS18B20, MQ-2, sensor de llama) para obtener mediciones del entorno en tiempo real.
+- **Módulo de procesamiento:** Analiza las lecturas de los sensores aplicando reglas de decisión basadas en umbrales establecidos. Si se detectan condiciones peligrosas, se genera un cambio de estado a "alerta". Además, se registran los valores de temperatura y se encarga de respetar la duración establecida para las alertas.
+- **Módulo de actuadores:** Si se detecta una alerta específica o de incendio, se activa la alarma poniendo el LED RGB en color rojo (indicando nivel de riesgo) y activando el buzzer para generar una advertencia sonora. En caso contrario, se desactiva este último y el LED toma un color verde.
+- **Módulo de visualización:** Actualiza los datos en la pantalla LCD y en el cliente web. Permite al usuario visualizar las condiciones en tiempo real y gestionar la desactivación de la alarma si es necesario. Lo anterior se logra a partir de la recepción de solicitudes HTTP GET desde el navegador para actualizar datos y gestionar la alarma.
+
+<p align="justify"> 
+Finalmente, el ciclo completo se repite cada 1000 ms, asegurando un monitoreo continuo y una respuesta rápida ante eventos críticos.
+</p>
 
 ### Esquemático de Hardware
 
